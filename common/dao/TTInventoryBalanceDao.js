@@ -6,7 +6,8 @@ const models = require('../models');
 
 // call module
 module.exports = {
-    create
+    create,
+    deleteAll
  
 }
 
@@ -18,6 +19,22 @@ async function create(transaction, model) {
             });
 
         return result;
+    } catch (err) {
+        console.log(err);
+        throw err;
+    }
+}
+
+async function deleteAll(transaction) {
+    try {                   
+         await models.ttinventorybalance.destroy(
+            {
+                transaction,
+                where: {},
+                truncate: true                
+            });
+
+        return true;
     } catch (err) {
         console.log(err);
         throw err;

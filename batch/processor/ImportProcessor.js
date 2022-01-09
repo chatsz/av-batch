@@ -34,6 +34,10 @@ class ImportProcessor {
 
       console.log("Files: ", files);
 
+      files = files.sort();
+
+      console.log("Sort: ", files);
+
       await asyncUtil.asyncForEach(files, async (data) => {
 
         console.log("file->", data);
@@ -45,11 +49,11 @@ class ImportProcessor {
         console.log("fName->", fName);
 
         const importFile = data;
-        const newFile =  importPath.archive + fName + "_" + Date.now().toString();
+        const newFile = importPath.archive + fName + "_" + Date.now().toString();
 
-        console.log("nFile->",newFile);
+        console.log("nFile->", newFile);
 
-        await _avImportProcessor.process(importFile, newFile);       
+        await _avImportProcessor.process(importFile, newFile);
 
       });
 

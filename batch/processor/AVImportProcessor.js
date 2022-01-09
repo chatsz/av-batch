@@ -28,7 +28,7 @@ class AVImportProcessor {
             logger.info("Excel File: ", importFile);
 
             xlsxFile(importFile).then((datas) => {
-
+                              
                 logger.info("Total Lines :" + datas.length);
 
                 logger.info("Validation file...");
@@ -39,15 +39,15 @@ class AVImportProcessor {
                 switch (_fileHeader) {
                     case 'ItemNoCatalogNumber':
                         console.log("Item Master");
-                        ProcessItemMaster(datas,  path.basename(importFile), path.basename(newFile));
+                        ProcessItemMaster(datas, path.basename(importFile), path.basename(newFile));
                         break;
                     case 'ABCodeMailName1':
                         console.log("Customer Master");
-                        ProcessCustomerMaster(datas,  path.basename(importFile), path.basename(newFile));
+                        ProcessCustomerMaster(datas, path.basename(importFile), path.basename(newFile));
                         break;
                     case 'ItemNoBP':
                         console.log("Inventory Balance");
-                        ProcessInventoryBalance(datas,  path.basename(importFile), path.basename(newFile));
+                        ProcessInventoryBalance(datas, path.basename(importFile), path.basename(newFile));
                         break;
 
                 }
@@ -67,7 +67,7 @@ class AVImportProcessor {
         }
 
         return "AVProcessor: processed.";
-    }    
+    }
 }
 
 async function ProcessItemMaster(datas, orgFile, newFile) {
@@ -100,7 +100,7 @@ async function ProcessItemMaster(datas, orgFile, newFile) {
                 _update.principalCode = "";
                 _update.barcode = "";
                 _update.subBrand = "";
-     
+
 
                 _update.itemCode = await checkNull(_data[0]);
                 _update.catalog = await checkNull(_data[1]);
@@ -118,22 +118,22 @@ async function ProcessItemMaster(datas, orgFile, newFile) {
                 _update.segment3 = await checkNull(_data[21]);
                 _update.uom = await checkNull(_data[22]);
                 _update.uomDesc = await checkNull(_data[22]);
-               
+
 
                 let _stopShipFlg = await checkNull(_data[24]);
                 _stopShipFlg == "" ? _update.stopShipFLg = 0 : _update.stopShipFLg = 1;
 
-                _update.importDate = Date.now();                
+                _update.importDate = _execDate;
 
                 logger.info("ROW : " + _row.toString() + " : DATA-->", _update);
 
                 let _ckCriteria = {
-                    itemCode: _update.itemCode,                       
+                    itemCode: _update.itemCode,
                 }
 
                 let inq = await TMItemDao.get(_ckCriteria);
 
-                console.log("FIND ITEM->",inq);
+                console.log("FIND ITEM->", inq);
 
                 if (inq == null) {
                     logger.info("ROW : " + _row.toString() + " : CREATE");
@@ -155,12 +155,12 @@ async function ProcessItemMaster(datas, orgFile, newFile) {
 
 
 
-        let _updateLog = {           
+        let _updateLog = {
             sDocTypeID: "ITEMMASTER",
             sFileName: orgFile,
             sFileNameNew: newFile,
             nTotalRecord: datas.length - 1,
-            nSuccessRecord: _totalSuccessRecord - 1,            
+            nSuccessRecord: _totalSuccessRecord - 1,
             sRemark: _err,
             sStatus: (datas.length == _totalSuccessRecord) ? 'SUCCESS' : 'FAILED',
             sUploadUser: "import",
@@ -218,18 +218,18 @@ async function ProcessCustomerMaster(datas, orgFile, newFile) {
                 _update.taxCode = await checkNull(_data[14]);
                 _update.taxRate = await checkNull(_data[15]);
                 _update.searchType = await checkNull(_data[16]);
-               
-                _update.importDate = Date.now();
+
+                _update.importDate = _execDate;
 
                 logger.info("ROW : " + _row.toString() + " : DATA-->", _update);
 
                 let _ckCriteria = {
-                    abCode: _update.abCode,                       
+                    abCode: _update.abCode,
                 }
 
                 let inq = await TMCustomerDao.get(_ckCriteria);
 
-                console.log("FIND CUSTOMER->",inq);
+                console.log("FIND CUSTOMER->", inq);
 
                 if (inq == null) {
                     logger.info("ROW : " + _row.toString() + " : CREATE");
@@ -249,12 +249,12 @@ async function ProcessCustomerMaster(datas, orgFile, newFile) {
 
         }
 
-        let _updateLog = {           
+        let _updateLog = {
             sDocTypeID: "CUSTMASTER",
             sFileName: orgFile,
             sFileNameNew: newFile,
             nTotalRecord: datas.length - 1,
-            nSuccessRecord: _totalSuccessRecord - 1,            
+            nSuccessRecord: _totalSuccessRecord - 1,
             sRemark: _err,
             sStatus: (datas.length == _totalSuccessRecord) ? 'SUCCESS' : 'FAILED',
             sUploadUser: "import",
@@ -283,6 +283,11 @@ async function ProcessInventoryBalance(datas, orgFile, newFile) {
     let _err = "";
 
     try {
+
+        logger.info("Delete All Inventory Balance Data..");        
+        await deleteAllInventoryBalance();
+        logger.info("Done Delete");  
+
         let _totalSuccessRecord = 1;
         let _row = 1;
         for (_row = 1; _row < datas.length; _row++) {
@@ -290,28 +295,74 @@ async function ProcessInventoryBalance(datas, orgFile, newFile) {
 
                 var _data = datas[_row];
                 let _dataLog = "DATA ROW[" + _row.toString() + "] : " + _data[0] + "," + _data[1] + "," + _data[2] + "," + _data[3] + "," + _data[4] + "," + _data[5] + "," + _data[6] + "," + _data[7];
-             
+                
                 logger.info(_dataLog);
 
-                let _update = {};
-                _update.customerID = 0;
-                _update.itemID = 0;
-                _update.batchNumber = await checkNull(_data[4]);
-                _update.expiryDate = await checkNull(_data[5]);
-                _update.rfid = await checkNull(_data[1]);
-                _update.uom = await checkNull(_data[7]);
-                _update.openQty = await checkNull(_data[6]);
-                _update.usageQty = 0;
-                _update.availableQty = await checkNull(_data[6]);
-                _update.itemNo = await checkNull(_data[0]);
-                _update.abCode = await checkNull(_data[3]);
-                              
-                _update.importDate = Date.now();
+                let _itemID = -1;
+                let _custID = -1;
+                let _itemCode = await checkNull(_data[0]);
+                let _abCode = await checkNull(_data[3]);
+            
+                logger.info("Get itemID from itemCode: "+_itemCode);  
 
-                logger.info("ROW : " + _row.toString() + " : CREATE");
-                    await createInventoryBalance(_update);                
+                let _ckCriteriaItem = {
+                    itemCode: _itemCode
+                }
+                let inqItem = await TMItemDao.get(_ckCriteriaItem);
+                if (inqItem == null)
+                {
+                    logger.error("Item Code Not Found-->"+_itemCode)
+                   
+                }else{
+                    _itemID=inqItem.dataValues.itemID;
 
-                _totalSuccessRecord += 1;
+                    logger.info("itemID-->"+_itemID.toString());  
+                }
+
+                logger.info("Get customerID from abCode: "+_abCode); 
+                let _ckCriteriaCust = {
+                    abCode: _abCode
+                }
+                let inqCust = await TMCustomerDao.get(_ckCriteriaCust);
+                if (inqCust == null)
+                {
+                    logger.error("AB Code Not Found-->"+_abCode)
+                   
+                }else{
+                    _custID=inqCust.dataValues.customerID;
+
+                    logger.info("customerID-->"+_custID.toString());  
+                }
+
+                if (_custID>-1 && _itemID>-1)
+                {
+                    let _update = {};
+                    _update.customerID = _custID;
+                    _update.itemID = _itemID;
+                    _update.batchNumber = await checkNull(_data[4]);
+                    _update.expiryDate = _data[5];
+                    _update.rfid = await checkNull(_data[1]);
+                    _update.uom = await checkNull(_data[7]);
+                    _update.openQty = await checkNull(_data[6]);
+                    _update.usageQty = 0;
+                    _update.availableQty = await checkNull(_data[6]);
+                    _update.itemNo = await checkNull(_data[0]);
+                    _update.abCode = await checkNull(_data[3]);
+    
+                    _update.importDate = _execDate;
+    
+                    logger.info("ROW : " + _row.toString() + " : CREATE");
+                    await createInventoryBalance(_update);
+                    
+                    _totalSuccessRecord += 1;
+                   
+                }else{                    
+                    logger.error("ERROR ROW : " + _row.toString() + ":" + e.toString());
+                    _err += "ERROR ROW : " + _row.toString() + ":" + e.toString() + "<br>";
+                }
+
+               
+                
 
             } catch (e) {
                 logger.error("ERROR ROW : " + _row.toString() + ":" + e.toString());
@@ -320,12 +371,12 @@ async function ProcessInventoryBalance(datas, orgFile, newFile) {
 
         }
 
-        let _updateLog = {           
+        let _updateLog = {
             sDocTypeID: "INVBALANCE",
             sFileName: orgFile,
             sFileNameNew: newFile,
             nTotalRecord: datas.length - 1,
-            nSuccessRecord: _totalSuccessRecord - 1,            
+            nSuccessRecord: _totalSuccessRecord - 1,
             sRemark: _err,
             sStatus: (datas.length == _totalSuccessRecord) ? 'SUCCESS' : 'FAILED',
             sUploadUser: "import",
@@ -351,7 +402,7 @@ async function createItemMaster(req) {
     let transaction = await db.transaction();
 
     try {
-       
+
         let result = await TMItemDao.create(transaction, req);
 
         transaction.commit();
@@ -364,7 +415,7 @@ async function createItemMaster(req) {
 }
 
 async function updateItemMaster(req) {
-   
+
     let transaction = await db.transaction();
 
     try {
@@ -385,7 +436,7 @@ async function createCustomerMaster(req) {
     let transaction = await db.transaction();
 
     try {
-       
+
         let result = await TMCustomerDao.create(transaction, req);
 
         transaction.commit();
@@ -398,7 +449,7 @@ async function createCustomerMaster(req) {
 }
 
 async function updateCustomerMaster(req) {
-   
+
     let transaction = await db.transaction();
 
     try {
@@ -422,11 +473,28 @@ async function checkNull(data) {
     return _ret;
 }
 
+
+async function deleteAllInventoryBalance() {
+    let transaction = await db.transaction();
+
+    try {
+
+        await TTInventoryBalanceDao.deleteAll(transaction);
+
+        transaction.commit();
+
+        return true;
+    } catch (e) {
+        transaction.rollback();
+        throw e;
+    }
+}
+
 async function createInventoryBalance(req) {
     let transaction = await db.transaction();
 
     try {
-       
+
         let result = await TTInventoryBalanceDao.create(transaction, req);
 
         transaction.commit();
