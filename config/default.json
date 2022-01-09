@@ -1,0 +1,22 @@
+{  
+  "mysql": {
+    "host": "localhost",
+    "user": "root",
+    "password": "P@ssw0rd",
+    "database": "av_db",
+    "instanceName": "",
+    "__connectionLimit": 100,
+    "logging": false
+  },    
+  
+  "allow": {
+    "ip": ["*"]
+  },    
+  "path": {
+    "dir": "/opt/assets"    
+  },
+  "defaultImg": {
+    "customerProfile": "https://i.ibb.co/NNqZk79/picture-profile.png",
+    "_404":"https://i.ibb.co/QJ9pnDW/img-404.png"
+  }
+}

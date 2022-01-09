@@ -1,0 +1,14 @@
+{
+  "jobs": {
+    "importJob": {
+      "pageSize": 10,
+      "jobScheduler": {
+        "cron": "* * * * *"
+      }
+    }
+  },
+  "importPath": {
+    "path": "C:/MyProject/AV-Online/Import/",
+    "archive": "C:/MyProject/AV-Online/Import/archive/"
+  }    
+}

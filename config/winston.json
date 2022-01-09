@@ -1,0 +1,47 @@
+{  
+    "api" : {
+        "dailyRotateFileTransport" : {
+            "filename" : "/EWMS/logs/api/%DATE%-EWMS-api.log",
+            "datePattern" : "YYYY-MM-DD",
+            "zippedArchive" : true,
+            "maxSize" : "5m",
+            "maxFiles" : "7d"
+        },
+        "logzioWinstonTransport" : {
+            "level" : "silly",
+            "name" : "winston_logzio",
+            "token" : "BsIrOsdMkUgrqPfRpQVJjRgyZVMLzJLU",
+            "host" : "listener-au.logz.io",
+            "extraFields" : {
+                "appName" : "EWMS-api",
+                "env" : "DEV"
+            }
+        }
+    }, 
+    "batch" : {
+        "dailyRotateFileTransport" : {
+            "filename" : "/EWMS/logs/batch/%DATE%-EWMS-batch.log",
+            "datePattern" : "YYYY-MM-DD",
+            "zippedArchive" : true,
+            "maxSize" : "5m",
+            "maxFiles" : "7d"
+        },
+        "dailyRotateJsonTransport" : {
+            "filename" : "/EWMS/logs/batch/%DATE%-EWMS-json.log",
+            "datePattern" : "YYYY-MM-DD",
+            "zippedArchive" : true,
+            "maxSize" : "5m",
+            "maxFiles" : "7d"
+        },
+        "logzioWinstonTransport" : {
+            "level" : "silly",
+            "name" : "winston_logzio",
+            "token" : "BsIrOsdMkUgrqPfRpQVJjRgyZVMLzJLU",
+            "host" : "listener-au.logz.io",
+            "extraFields" : {
+                "appName" : "EWMS-batch",
+                "env" : "DEV"
+            }
+        }
+    }
+}
