@@ -13,13 +13,9 @@ let importTask = cron.schedule(config.importJob.jobScheduler.cron, () =>  {
       timezone: "Asia/Bangkok"
 });
 
-
 //Start Job
 
 logger.info("Start Scheduler Task");
 logger.info("Job cron : ", config.importJob.jobScheduler.cron);
 importTask.start();
 logger.info("Success : Start Job cron");
-
-
-1

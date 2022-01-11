@@ -6,7 +6,8 @@ const models = require('../models');
 
 // call module
 module.exports = {
-    create
+    create,
+    deleteAll
  
 }
 
@@ -24,3 +25,18 @@ async function create(transaction, model) {
     }
 }
 
+async function deleteAll(transaction) {
+    try {                   
+         await models.tmusercust.destroy(
+            {
+                transaction,
+                where: {},
+                truncate: true                
+            });
+
+        return true;
+    } catch (err) {
+        console.log(err);
+        throw err;
+    }
+}
