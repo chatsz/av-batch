@@ -39,6 +39,7 @@
     "neat-csv": "^5.2.0",
     "node-cron": "^2.0.3",
     "nodejs-nodemailer-outlook": "^1.2.3",
+    "nodemailer": "^6.7.2",
     "path": "^0.12.7",
     "pdf-to-base64": "^1.0.3",
     "qs": "^6.9.6",
@@ -50,6 +51,7 @@
     "uuid": "^8.3.0",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.1",
-    "winston-logzio": "^5.1.2"
+    "winston-logzio": "^5.1.2",
+    "xlsx": "^0.17.5"
   }
 }

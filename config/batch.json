@@ -10,5 +10,17 @@
   "importPath": {
     "path": "C:/MyProject/AV-Online/Import/",
     "archive": "C:/MyProject/AV-Online/Import/archive/"
-  }    
+  },
+  "mail": {
+    "host": "10.15.115.5",
+    "port": 25,
+    "secure": false,
+    "use_authentication": false,
+    "user": "",
+    "password": "",
+    "emailSender": "chmysautorpt@dch-holdings.com"
+  },
+  "exportPath": {
+    "path": "d:/temp/export/"
+  }
 }
