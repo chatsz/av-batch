@@ -83,173 +83,192 @@ class ImportProcessor {
       let _sEmail = "";
       let _ccMail = "";
       let _country = "";
+      let _sql = "";
+      let _fileName = "";
+      let _subject = "";
+      let _to = "";
+      let _body = "";
 
 
-      let _sqlR5 = "select b.documentNbr,b.partaintMRN,b.partaintPhysicainName,c.abCode,c.extenedName,b.createDate,d.itemCode,d.description1,a.batchNumber,a.usageQty,a.itemPrice,a.usedDate,a.rfid,a.partaintRemark1 ,a.partaintRemark2,a.isTopUp,a.isBill";
+
+      let notifyConfig = await InquiryDao.inquiry("select * from notifyconfig");
+
+
+      let _sqlR5 = "select b.documentNbr as Document,b.partaintMRN as MRN,b.partaintPhysicainName as 'Physician Name',c.abCode as 'Customer Code',c.extenedName as 'Customer Name',b.createDate as 'Create Date',d.itemCode as 'Item Code',d.description1 as 'Item Description',a.batchNumber as 'Batch Number',a.expiryDate as 'Expiry Date', a.usageQty as 'Used Qty',a.itemPrice as 'Price per Unit',a.usedDate as 'Used Date',a.rfid as RFID,a.partaintRemark1 as Remark1 ,a.partaintRemark2 as Notes,a.isTopUp as 'Top up',a.isBill as Bill,b.createUser as User,createDate as 'Entry Date'";
       _sqlR5 += " from ttr5utilizationitem a left join ttr5utilization b on a.r5UtilizationID=b.r5UtilizationID";
       _sqlR5 += " left join tmcustomer c on b.customerID=c.customerID";
       _sqlR5 += " left join tmitem d on a.itemID=d.itemID";
-      _sqlR5 += " where b.r5UtilizationID=";
+      _sqlR5 += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
 
-      let _sqlMovement = "select c.abCode as from_abCode,c.extenedName as fromCustomer,d.abCode as to_abCode,d.extenedName as toCustomer,b.actionType,b.requestBy,b.documentNbr,b.contactNo,b.contactPerson,b.contactPersonNumber,b.deliveryDate,";
-      _sqlMovement += " e.itemCode,e.description1,a.batchNumber,a.usageQty,a.requireDate,a.remark,a.uuid";
+
+      let _sqlMovement = "select b.documentNbr as Document,c.abCode as 'Own Customer Code',c.extenedName as 'Own Customer Name',d.abCode as ' To Customer Code',d.extenedName as 'To Customer Name',";
+      _sqlMovement += "(case when (b.actionType=1) then 'IT Adjust' when (b.actionType=2) then 'Transfer' when (b.actionType=3) then 'Top up' when (b.actionType=4) then 'Return to DC' end) as 'Type',";
+      _sqlMovement += "b.requestBy as 'Request By',b.contactNo as 'Contact No',b.contactPerson as 'Contact Person',b.contactPersonNumber as 'Contact Person Number',b.deliveryDate as 'Delivery Date',";
+      _sqlMovement += " e.itemCode as 'Item Code',e.description1 as 'Item Description',a.batchNumber as 'Batch Number',a.expiryDate as 'Expiry Date', a.usageQty as 'Qty',a.requireDate as 'Require Date',a.remark,";
+      _sqlMovement += "(case when (stopshipLotCheckedFlg=1) then 'Yes' when (stopshipLotCheckedFlg=0) then 'No' end) as 'Stopship Status',";
+      _sqlMovement += "b.createUser as User,createDate as 'Entry Date'";
+
       _sqlMovement += " from ttinvmovementitem a";
       _sqlMovement += " left join ttinvmovement b on a.invMovementID=b.invMovementID";
       _sqlMovement += " left join tmcustomer c on b.fromCustomerID=c.customerID";
       _sqlMovement += " left join tmcustomer d on b.toCustomerID=d.customerID";
       _sqlMovement += " left join tmitem e on a.itemID=e.itemID";
-      _sqlMovement += " where b.invMovementID=";
+      _sqlMovement += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
 
 
-      //==== R5 ===========================================
-      let _sql = "select r5UtilizationID as ID,documentNbr as DOC,createUser from ttr5utilization where notifyFlag=0 or notifyFlag is null order by r5UtilizationID";
 
-      const notifyConfig = await InquiryDao.inquiry("select * from notifyconfig");
+      _sql = _sqlR5 + " and a.isTopUp=1 order by b.documentNbr";
 
-      let _trans = await InquiryDao.inquiry(_sql);
+      let _r5UpdateList = [];
 
-      for (let index = 0; index < _trans.length; index++) {
+      let _dataTopUp = await InquiryDao.inquiry(_sql);
+      console.log("TOP UP: ", _dataTopUp);
 
-        const element = _trans[index];
+      if (_dataTopUp.length > 0) {
 
-        const user = await InquiryDao.inquiry("select country,email from tmuser where userID='" + element.createUser + "'");
+        _fileName = "TopUp_" + Date.now().toString() + ".xlsx";
 
-        _ccMail = user[0].email;
-        _country = user[0].country;
+        await _excelExport.export(_dataTopUp, _filePath + _fileName);
 
-        _sql = _sqlR5 + element.ID;
+        _subject = "Request for Top up";
 
-        const _data = await InquiryDao.inquiry(_sql);
-        console.log("ID: ", element.ID);
-        console.log(_data);
+        _to = notifyConfig.filter(z => z.sType == "01" && z.sProgram == "R5");
 
-        let _dataTopUp = _data.filter(z => z.isTopUp == 1);
+        logger.info("SEND MAIL: R5 TopUp");
+        logger.info("SUBJECT: ", _subject);
+        logger.info("TO: ", _to[0].sEmail);
 
-        if (_dataTopUp.length > 0) {
+        _body = "<b>Dear All,</b><br><br>"
+        _body += "<b>Please provide Top up refer to the detail in attached file.</b>"
 
-          const _fileName = element.DOC + "_TopUp_" + Date.now().toString() + ".xlsx";
+        let info = await transporter.sendMail({
+          from: mail.emailSender,
+          to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
+          subject: _subject,
+          html: _body,
+          priority: "high",
+          attachments: [
+            {
+              path: _filePath + _fileName
+            }
+          ]
+        });
+        // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
+        console.log('Message sent: %s', info.messageId);
 
-          await _excelExport.export(_dataTopUp, _filePath + _fileName);
+        for (let index = 0; index < _dataTopUp.length; index++) {
+          const element = _dataTopUp[index];
 
-          const _subject = element.DOC + " : Request for Top up";
+          const _r5Upd = { documentNbr: element.Document };
 
-          const _to = notifyConfig.filter(z => z.sCountry == _country && z.sType == "01" && z.sProgram == "R5");
+          _r5UpdateList.push(_r5Upd);
 
-          logger.info("SEND MAIL: R5 TopUp");
-          logger.info("SUBJECT: ", _subject);
-          logger.info("TO: ",_to[0].sEmail);
-          logger.info("CC: ",_ccMail);
-
-
-          let _body = "<b>Dear All,</b><br><br>"
-          _body += "<b>Please provide Top up refer to the detail in attached file.</b>"
-
-          let info = await transporter.sendMail({
-            from: mail.emailSender,
-            to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
-            cc: _ccMail,
-            subject: _subject,
-            html: _body,
-            priority: "high",
-            attachments: [
-              {
-                path: _filePath + _fileName
-              }
-            ]
-          });
-          // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
-          console.log('Message sent: %s', info.messageId);
         }
-
-        let _dataBill = _data.filter(z => z.isBill == 1);
-
-        if (_dataBill.length > 0) {
-
-          const _fileName = element.DOC + "_Bill_" + Date.now().toString() + ".xlsx";
-
-          await _excelExport.export(_dataTopUp, _filePath + _fileName);
-
-          const _subject = element.DOC + " : Request for Bill";
-
-          const _to = notifyConfig.filter(z => z.sCountry == _country && z.sType == "02" && z.sProgram == "R5");
-
-          logger.info("SEND MAIL: R5 BILL");
-          logger.info("SUBJECT: ", _subject);
-          logger.info("TO: ",_to[0].sEmail);
-          logger.info("CC: ",_ccMail);
-
-          let _body = "<b>Dear All,</b><br><br>"
-          _body += "<b>Please bill to customer refer to the detail in attached file.</b>"
-
-          let info = await transporter.sendMail({
-            from: mail.emailSender,
-            to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
-            subject: _subject,
-            html: _body,
-            priority: "high",
-            attachments: [
-              {
-                path: _filePath + _fileName
-              }
-            ]
-          });
-          // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
-          console.log('Message sent: %s', info.messageId);
-        }
-
-        await InquiryDao.update("update ttr5utilization set notifyFlag=1 where r5UtilizationID=" + element.ID)
 
       }
+
+      _sql = _sqlR5 + " and a.isBill=1 order by b.documentNbr";
+
+      let _dataBill = await InquiryDao.inquiry(_sql);
+      console.log("BILL: ", _dataBill);
+
+      if (_dataBill.length > 0) {
+
+        _fileName = "Bill_" + Date.now().toString() + ".xlsx";
+
+        await _excelExport.export(_dataBill, _filePath + _fileName);
+
+        _subject = "Request for Bill";
+
+        _to = notifyConfig.filter(z => z.sType == "02" && z.sProgram == "R5");
+
+        logger.info("SEND MAIL: R5 BILL");
+        logger.info("SUBJECT: ", _subject);
+        logger.info("TO: ", _to[0].sEmail);
+
+        _body = "<b>Dear All,</b><br><br>"
+        _body += "<b>Please bill to customer refer to the detail in attached file.</b>"
+
+        let info = await transporter.sendMail({
+          from: mail.emailSender,
+          to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
+          subject: _subject,
+          html: _body,
+          priority: "high",
+          attachments: [
+            {
+              path: _filePath + _fileName
+            }
+          ]
+        });
+        // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
+        console.log('Message sent: %s', info.messageId);
+
+        for (let index = 0; index < _dataBill.length; index++) {
+          const element = _dataBill[index];
+
+          const _r5Upd = { documentNbr: element.Document };
+
+          _r5UpdateList.push(_r5Upd);
+
+        }
+
+      }
+
+      logger.info("Update R5 NotifyFlag");
+
+      for (let index = 0; index < _r5UpdateList.length; index++) {
+        const element = _r5UpdateList[index];
+        logger.info("Update R5 NotifyFlag : DocumentNbr : ", element.documentNbr);
+
+        await InquiryDao.update("update ttr5utilization set notifyFlag=1 where documentNbr='" + element.documentNbr + "'");
+
+      }
+
 
       //=== End R5 ====================================================
 
       //==== MoveMent =================================================
-      _sql = "select invMovementID as ID,documentNbr as DOC,actionType, createUser from ttinvmovement where notifyFlag=0 or notifyFlag is null  order by invMovementID";
+      let _action = 0;
 
-      _trans = await InquiryDao.inquiry(_sql);
+      for (let index = 1; index < 5; index++) {
 
-      for (let index = 0; index < _trans.length; index++) {
-        const element = _trans[index];
-        _sql = _sqlMovement + element.ID;
+        _action = index;
+
+        _sql = _sqlMovement
+        _sql += "and b.actionType=" + _action.toString();
+        _sql += " order by b.documentNbr";
 
         const _data = await InquiryDao.inquiry(_sql);
-        console.log("ID: ", element.ID);
         console.log(_data);
 
         if (_data.length > 0) {
-
-          console.log("PROCESS : ", element.actionType);
-
-          const user = await InquiryDao.inquiry("select country,email from tmuser where userID='" + element.createUser + "'");
-
-          _ccMail = user[0].email;
-          _country = user[0].country;
 
           let _actionType = "";
           let _subject = "";
           let _bodyDetail = "";
           let _sType = "";
-          if (element.actionType == 1) {
-            _actionType = element.DOC + "_ITAdjust_";
-            _subject = element.DOC + " : Request for IT Adjust";
+          if (_action == 1) {
+            _actionType = "ITAdjust_";
+            _subject = "Request for IT Adjust";
             _bodyDetail = "<b>Please process IT Adjust refer to the detail in attached file.</b>";
             _sType = "01";
           } else {
-            if (element.actionType == 2) {
-              _actionType = element.DOC + "_Transfer_";
-              _subject = element.DOC + " : Request for transfer";
+            if (_action == 2) {
+              _actionType = "Transfer_";
+              _subject = "Request for transfer";
               _bodyDetail = "<b>Please process Transfer refer to the detail in attached file.</b>";
               _sType = "02";
             } else {
-              if (element.actionType == 3) {
-                _actionType = element.DOC + "_TopUp_";
-                _subject = element.DOC + " : Request for Top up";
+              if (_action == 3) {
+                _actionType = "TopUp_";
+                _subject = "Request for Top up";
                 _bodyDetail = "<b>Please provide Top up refer to the detail in attached file.</b>";
                 _sType = "03";
               } else {
-                if (element.actionType == 4) {
-                  _actionType = element.DOC + "_ReturnDC_";
-                  _subject = element.DOC + " : Request for return to DC";
+                if (_action == 4) {
+                  _actionType = "ReturnDC_";
+                  _subject = "Request for return to DC";
                   _bodyDetail = "<b>Please process Return refer to the detail in attached file.</b>";
                   _sType = "04";
                 }
@@ -257,9 +276,11 @@ class ImportProcessor {
             }
           }
 
-          const _to = notifyConfig.filter(z => z.sCountry == _country && z.sType == _sType && z.sProgram == "IM");
+          console.log("PROCESS : ", _actionType);
 
-          const _fileName = _actionType + Date.now().toString() + ".xlsx";
+          _to = notifyConfig.filter(z => z.sType == _sType && z.sProgram == "IM");
+
+          _fileName = _actionType + Date.now().toString() + ".xlsx";
 
           console.log("Export Excel: ", _fileName);
 
@@ -269,16 +290,14 @@ class ImportProcessor {
 
           logger.info("SEND MAIL: Movement");
           logger.info("SUBJECT: ", _subject);
-          logger.info("TO: ",_to[0].sEmail);
-          logger.info("CC: ",_ccMail);
+          logger.info("TO: ", _to[0].sEmail);
 
-          let _body = "<b>Dear All,</b><br><br>"
+          _body = "<b>Dear All,</b><br><br>"
           _body += _bodyDetail
 
           let info = await transporter.sendMail({
             from: mail.emailSender,
             to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
-            cc: _ccMail,
             subject: _subject,
             html: _body,
             priority: "high",
@@ -290,14 +309,20 @@ class ImportProcessor {
           });
           // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
           console.log('Message sent: %s', info.messageId);
+
+          logger.info("Update Movement NotifyFlag");
+          for (let index = 0; index < _data.length; index++) {
+            const element = _data[index];
+            await InquiryDao.update("update ttinvmovement set notifyFlag=1 where documentNbr='" + element.Document+"'");       
+            
+            logger.info("Update Movement NotifyFlag : DocumentNbr : ", element.Document);
+          }
+          
         }
-
-
-        await InquiryDao.update("update ttinvmovement set notifyFlag=1 where invMovementID=" + element.ID)
 
       }
 
-      //=== End R5 ====================================================
+      //=== End Movement ====================================================
 
 
       return true;
