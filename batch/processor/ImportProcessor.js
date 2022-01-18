@@ -94,14 +94,14 @@ class ImportProcessor {
       let notifyConfig = await InquiryDao.inquiry("select * from notifyconfig");
 
 
-      let _sqlR5 = "select b.documentNbr as Document,b.partaintMRN as MRN,b.partaintPhysicainName as 'Physician Name',c.abCode as 'Customer Code',c.extenedName as 'Customer Name',b.createDate as 'Create Date',d.itemCode as 'Item Code',d.description1 as 'Item Description',a.batchNumber as 'Batch Number',a.expiryDate as 'Expiry Date', a.usageQty as 'Used Qty',a.itemPrice as 'Price per Unit',a.usedDate as 'Used Date',a.rfid as RFID,a.partaintRemark1 as Remark1 ,a.partaintRemark2 as Notes,a.isTopUp as 'Top up',a.isBill as Bill,b.createUser as User,createDate as 'Entry Date'";
+      let _sqlR5 = "select b.documentNbr as Document,b.partaintMRN as MRN,b.partaintPhysicainName as 'Physician Name',c.abCode as 'Customer Code',c.mailName1 as 'Customer Name',b.createDate as 'Create Date',d.itemCode as 'Item Code',d.description1 as 'Item Description',a.batchNumber as 'Batch Number',a.expiryDate as 'Expiry Date', a.usageQty as 'Used Qty',a.itemPrice as 'Price per Unit',a.usedDate as 'Used Date',a.rfid as RFID,a.partaintRemark1 as Remark1 ,a.partaintRemark2 as Notes,a.isTopUp as 'Top up',a.isBill as Bill,b.createUser as User,createDate as 'Entry Date'";
       _sqlR5 += " from ttr5utilizationitem a left join ttr5utilization b on a.r5UtilizationID=b.r5UtilizationID";
       _sqlR5 += " left join tmcustomer c on b.customerID=c.customerID";
       _sqlR5 += " left join tmitem d on a.itemID=d.itemID";
       _sqlR5 += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
 
 
-      let _sqlMovement = "select b.documentNbr as Document,c.abCode as 'Own Customer Code',c.extenedName as 'Own Customer Name',d.abCode as ' To Customer Code',d.extenedName as 'To Customer Name',";
+      let _sqlMovement = "select b.documentNbr as Document,c.abCode as 'Own Customer Code',c.mailName1 as 'Own Customer Name',d.abCode as ' To Customer Code',d.mailName1 as 'To Customer Name',";
       _sqlMovement += "(case when (b.actionType=1) then 'IT Adjust' when (b.actionType=2) then 'Transfer' when (b.actionType=3) then 'Top up' when (b.actionType=4) then 'Return to DC' end) as 'Type',";
       _sqlMovement += "b.requestBy as 'Request By',b.contactNo as 'Contact No',b.contactPerson as 'Contact Person',b.contactPersonNumber as 'Contact Person Number',b.deliveryDate as 'Delivery Date',";
       _sqlMovement += " e.itemCode as 'Item Code',e.description1 as 'Item Description',a.batchNumber as 'Batch Number',a.expiryDate as 'Expiry Date', a.usageQty as 'Qty',a.requireDate as 'Require Date',a.remark,";
@@ -114,6 +114,20 @@ class ImportProcessor {
       _sqlMovement += " left join tmcustomer d on b.toCustomerID=d.customerID";
       _sqlMovement += " left join tmitem e on a.itemID=e.itemID";
       _sqlMovement += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
+
+      let _sqlMovement2 = "select b.documentNbr as Document,c.abCode as 'Own Customer Code',c.mailName1 as 'Own Customer Name',";
+      _sqlMovement2 += "(case when (b.actionType=1) then 'IT Adjust' when (b.actionType=2) then 'Transfer' when (b.actionType=3) then 'Top up' when (b.actionType=4) then 'Return to DC' end) as 'Type',";
+      _sqlMovement2 += "b.requestBy as 'Request By',b.contactNo as 'Contact No',";
+      _sqlMovement2 += " e.itemCode as 'Item Code',e.description1 as 'Item Description',a.batchNumber as 'Batch Number',a.expiryDate as 'Expiry Date', a.usageQty as 'Qty',a.requireDate as 'Require Date',a.remark,";
+      _sqlMovement2 += "(case when (stopshipLotCheckedFlg=1) then 'Yes' when (stopshipLotCheckedFlg=0) then 'No' end) as 'Stopship Status',";
+      _sqlMovement2 += "b.createUser as User,createDate as 'Entry Date'";
+
+      _sqlMovement2 += " from ttinvmovementitem a";
+      _sqlMovement2 += " left join ttinvmovement b on a.invMovementID=b.invMovementID";
+      _sqlMovement2 += " left join tmcustomer c on b.fromCustomerID=c.customerID";
+      _sqlMovement2 += " left join tmcustomer d on b.toCustomerID=d.customerID";
+      _sqlMovement2 += " left join tmitem e on a.itemID=e.itemID";
+      _sqlMovement2 += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
 
 
 
@@ -235,7 +249,13 @@ class ImportProcessor {
 
         _action = index;
 
-        _sql = _sqlMovement
+        if (_action==3 || _action==4)
+        {
+          _sql = _sqlMovement2
+        }else{
+          _sql = _sqlMovement
+        }
+       
         _sql += "and b.actionType=" + _action.toString();
         _sql += " order by b.documentNbr";
 
