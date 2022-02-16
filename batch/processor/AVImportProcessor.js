@@ -97,7 +97,7 @@ async function UpdateLogError(orgFile, newFile) {
             sFileNameNew: newFile,
             nTotalRecord: 0,
             nSuccessRecord: 0,
-            sRemark: "Invalid File",
+            sRemark: "Invalid File Format: " + orgFile,
             sStatus: "FAILED",
             sUploadUser: "import",
             dUploadDate: Date.now(),
@@ -344,6 +344,22 @@ async function ProcessInventoryBalance(datas, orgFile, newFile) {
                 let _itemCode = await checkNull(_data[0]);
                 let _abCode = await checkNull(_data[3]);
 
+                logger.info("Expiry Date: ", _data[5]);
+
+                let _yy = _data[5].toString().substr(0, 4);
+                let _mm = _data[5].toString().substr(4, 2);
+                let _dd = _data[5].toString().substr(6, 2);
+
+                logger.info("YYYY: ", _yy);
+                logger.info("MM: ", _mm);
+                logger.info("DD: ", _dd);
+
+                let _expiryDate = _yy + "-" + _mm + "-" + _dd + "T00:00:00";
+
+                logger.info("Expiry Date Conv : ", _expiryDate);
+
+
+
                 logger.info("Get itemID from itemCode: " + _itemCode);
 
                 let _ckCriteriaItem = {
@@ -378,7 +394,7 @@ async function ProcessInventoryBalance(datas, orgFile, newFile) {
                     _update.customerID = _custID;
                     _update.itemID = _itemID;
                     _update.batchNumber = await checkNull(_data[4]);
-                    _update.expiryDate = _data[5];
+                    _update.expiryDate = _expiryDate;
                     _update.rfid = await checkNull(_data[1]);
                     _update.uom = await checkNull(_data[7]);
                     _update.openQty = await checkNull(_data[6]);
@@ -395,8 +411,8 @@ async function ProcessInventoryBalance(datas, orgFile, newFile) {
                     _totalSuccessRecord += 1;
 
                 } else {
-                    logger.error("ERROR ROW : " + _row.toString() + ":" + e.toString());
-                    _err += "ERROR ROW : " + _row.toString() + ":" + e.toString() + "<br>";
+                    logger.error("ERROR ROW : " + _row.toString());
+                    _err += "ERROR ROW : " + _row.toString() + "<br>";
                 }
 
 

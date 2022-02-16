@@ -29,8 +29,8 @@ class ImportProcessor {
   async process() {
 
     try {
-      logger.info("Start Process Import File");
-      logger.info("Version 1.0.1");
+      logger.info("Start AV Process Import File");
+      logger.info("Version 1.0.2");
 
       logger.info("Scan File..");
 
@@ -88,10 +88,14 @@ class ImportProcessor {
       let _subject = "";
       let _to = "";
       let _body = "";
+      let _senderMail = "";
+      let _senderName = "";
 
 
 
       let notifyConfig = await InquiryDao.inquiry("select * from notifyconfig");
+
+      let _sqlSenderMail = "select email,name,lastName from tmuser where userID in ";
 
 
       let _sqlR5 = "select b.documentNbr as Document,b.partaintMRN as MRN,b.partaintPhysicainName as 'Physician Name',c.abCode as 'Customer Code',c.mailName1 as 'Customer Name',b.createDate as 'Create Date',d.itemCode as 'Item Code',d.description1 as 'Item Description',a.batchNumber as 'Batch Number',a.expiryDate as 'Expiry Date', a.usageQty as 'Used Qty',a.itemPrice as 'Price per Unit',a.usedDate as 'Used Date',a.rfid as RFID,a.partaintRemark1 as Remark1 ,a.partaintRemark2 as Notes,a.isTopUp as 'Top up',a.isBill as Bill,b.createUser as User,createDate as 'Entry Date'";
@@ -99,6 +103,33 @@ class ImportProcessor {
       _sqlR5 += " left join tmcustomer c on b.customerID=c.customerID";
       _sqlR5 += " left join tmitem d on a.itemID=d.itemID";
       _sqlR5 += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
+
+      let _sqlR5TopupMail = "(select distinct b.createUser ";
+      _sqlR5TopupMail += " from ttr5utilizationitem a left join ttr5utilization b on a.r5UtilizationID=b.r5UtilizationID";
+      _sqlR5TopupMail += " left join tmcustomer c on b.customerID=c.customerID";
+      _sqlR5TopupMail += " left join tmitem d on a.itemID=d.itemID";
+      _sqlR5TopupMail += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
+      _sqlR5TopupMail += " and a.isTopUp=1)";
+
+      _sqlR5TopupMail = _sqlSenderMail + _sqlR5TopupMail;
+
+      let _sqlR5BillMail = "(select distinct b.createUser ";
+      _sqlR5BillMail += " from ttr5utilizationitem a left join ttr5utilization b on a.r5UtilizationID=b.r5UtilizationID";
+      _sqlR5BillMail += " left join tmcustomer c on b.customerID=c.customerID";
+      _sqlR5BillMail += " left join tmitem d on a.itemID=d.itemID";
+      _sqlR5BillMail += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
+      _sqlR5BillMail += " and a.isTopUp=1)";
+
+      _sqlR5BillMail = _sqlSenderMail + _sqlR5BillMail;
+
+      let _sqlR5AllMail = "(select distinct b.createUser ";
+      _sqlR5AllMail += " from ttr5utilizationitem a left join ttr5utilization b on a.r5UtilizationID=b.r5UtilizationID";
+      _sqlR5AllMail += " left join tmcustomer c on b.customerID=c.customerID";
+      _sqlR5AllMail += " left join tmitem d on a.itemID=d.itemID";
+      _sqlR5AllMail += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
+      _sqlR5AllMail += " )";
+
+      _sqlR5AllMail = _sqlSenderMail + _sqlR5AllMail;
 
 
       let _sqlMovement = "select b.documentNbr as Document,c.abCode as 'Own Customer Code',c.mailName1 as 'Own Customer Name',d.abCode as ' To Customer Code',d.mailName1 as 'To Customer Name',";
@@ -113,7 +144,7 @@ class ImportProcessor {
       _sqlMovement += " left join tmcustomer c on b.fromCustomerID=c.customerID";
       _sqlMovement += " left join tmcustomer d on b.toCustomerID=d.customerID";
       _sqlMovement += " left join tmitem e on a.itemID=e.itemID";
-      _sqlMovement += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
+      _sqlMovement += " where b.status=2 and (b.notifyFlag is null or b.notifyFlag=0) ";
 
       let _sqlMovement2 = "select b.documentNbr as Document,c.abCode as 'Own Customer Code',c.mailName1 as 'Own Customer Name',";
       _sqlMovement2 += "(case when (b.actionType=1) then 'IT Adjust' when (b.actionType=2) then 'Transfer' when (b.actionType=3) then 'Top up' when (b.actionType=4) then 'Return to DC' end) as 'Type',";
@@ -127,7 +158,15 @@ class ImportProcessor {
       _sqlMovement2 += " left join tmcustomer c on b.fromCustomerID=c.customerID";
       _sqlMovement2 += " left join tmcustomer d on b.toCustomerID=d.customerID";
       _sqlMovement2 += " left join tmitem e on a.itemID=e.itemID";
-      _sqlMovement2 += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
+      _sqlMovement2 += " where b.status=2 and (b.notifyFlag is null or b.notifyFlag=0) ";
+
+
+      let _sqlMovementMail = "(select distinct b.createUser from ttinvmovementitem a";
+      _sqlMovementMail += " left join ttinvmovement b on a.invMovementID=b.invMovementID";
+      _sqlMovementMail += " left join tmcustomer c on b.fromCustomerID=c.customerID";
+      _sqlMovementMail += " left join tmcustomer d on b.toCustomerID=d.customerID";
+      _sqlMovementMail += " left join tmitem e on a.itemID=e.itemID";
+      _sqlMovementMail += " where b.status=2 and (b.notifyFlag is null or b.notifyFlag=0) ";
 
 
 
@@ -140,17 +179,24 @@ class ImportProcessor {
 
       if (_dataTopUp.length > 0) {
 
+        let _r5TopupMail = await InquiryDao.inquiry(_sqlR5TopupMail);
+
+        _senderMail = await GetSenderMail(_r5TopupMail);
+        _senderName = await GetSenderName(_r5TopupMail);
+
+
         _fileName = "TopUp_" + Date.now().toString() + ".xlsx";
 
         await _excelExport.export(_dataTopUp, _filePath + _fileName);
 
-        _subject = "Request for Top up";
+        _subject = "R5 Request for Top up :" + _senderName;
 
         _to = notifyConfig.filter(z => z.sType == "01" && z.sProgram == "R5");
 
         logger.info("SEND MAIL: R5 TopUp");
         logger.info("SUBJECT: ", _subject);
         logger.info("TO: ", _to[0].sEmail);
+        logger.info("CC: ", _senderMail);
 
         _body = "<b>Dear All,</b><br><br>"
         _body += "<b>Please provide Top up refer to the detail in attached file.</b>"
@@ -158,6 +204,7 @@ class ImportProcessor {
         let info = await transporter.sendMail({
           from: mail.emailSender,
           to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
+          cc: _senderMail,
           subject: _subject,
           html: _body,
           priority: "high",
@@ -188,17 +235,23 @@ class ImportProcessor {
 
       if (_dataBill.length > 0) {
 
+        let _r5BillMail = await InquiryDao.inquiry(_sqlR5BillMail);
+
+        _senderMail = await GetSenderMail(_r5BillMail);
+        _senderName = await GetSenderName(_r5BillMail);
+
         _fileName = "Bill_" + Date.now().toString() + ".xlsx";
 
         await _excelExport.export(_dataBill, _filePath + _fileName);
 
-        _subject = "Request for Bill";
+        _subject = "R5 Request for Bill : " + _senderName;
 
         _to = notifyConfig.filter(z => z.sType == "02" && z.sProgram == "R5");
 
         logger.info("SEND MAIL: R5 BILL");
         logger.info("SUBJECT: ", _subject);
         logger.info("TO: ", _to[0].sEmail);
+        logger.info("CC: ", _senderMail);
 
         _body = "<b>Dear All,</b><br><br>"
         _body += "<b>Please bill to customer refer to the detail in attached file.</b>"
@@ -206,6 +259,7 @@ class ImportProcessor {
         let info = await transporter.sendMail({
           from: mail.emailSender,
           to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
+          cc: _senderMail,
           subject: _subject,
           html: _body,
           priority: "high",
@@ -229,6 +283,51 @@ class ImportProcessor {
 
       }
 
+
+      let _r5UnionData = _dataTopUp.concat(_dataBill);
+
+      console.log("R5_UNION : ", _r5UnionData);
+
+      if (_r5UnionData.length > 0) {
+
+        let _r5AllMail = await InquiryDao.inquiry(_sqlR5AllMail);
+
+        _senderMail = await GetSenderMail(_r5AllMail);
+        _senderName = await GetSenderName(_r5AllMail);
+
+        _fileName = "R5_" + Date.now().toString() + ".xlsx";
+
+        await _excelExport.export(_r5UnionData, _filePath + _fileName);
+
+        _subject = "R5 All : " + _senderName;
+
+        _to = notifyConfig.filter(z => z.sType == "03" && z.sProgram == "R5");
+
+        logger.info("SEND MAIL: R5 All");
+        logger.info("SUBJECT: ", _subject);
+        logger.info("TO: ", _to[0].sEmail);
+        logger.info("CC: ", _senderMail);
+
+        _body = "<b>Dear All,</b><br><br>"
+        _body += "<b>Please see all R5 detail in attached file.</b>"
+
+        let info = await transporter.sendMail({
+          from: mail.emailSender,
+          to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
+          cc: _senderMail,
+          subject: _subject,
+          html: _body,
+          priority: "high",
+          attachments: [
+            {
+              path: _filePath + _fileName
+            }
+          ]
+        });
+
+      }
+
+
       logger.info("Update R5 NotifyFlag");
 
       for (let index = 0; index < _r5UpdateList.length; index++) {
@@ -249,13 +348,12 @@ class ImportProcessor {
 
         _action = index;
 
-        if (_action==3 || _action==4)
-        {
+        if (_action == 3 || _action == 4) {
           _sql = _sqlMovement2
-        }else{
+        } else {
           _sql = _sqlMovement
         }
-       
+
         _sql += "and b.actionType=" + _action.toString();
         _sql += " order by b.documentNbr";
 
@@ -264,31 +362,38 @@ class ImportProcessor {
 
         if (_data.length > 0) {
 
+          let _sqlMovementMail2 = _sqlSenderMail + _sqlMovementMail + " and b.actionType=" + _action.toString() + ")";
+
+          let _MovementMail = await InquiryDao.inquiry(_sqlMovementMail2);
+
+          _senderMail = await GetSenderMail(_MovementMail);
+          _senderName = await GetSenderName(_MovementMail);
+
           let _actionType = "";
           let _subject = "";
           let _bodyDetail = "";
           let _sType = "";
           if (_action == 1) {
             _actionType = "ITAdjust_";
-            _subject = "Request for IT Adjust";
+            _subject = "Request for IT Adjust : " + _senderName;
             _bodyDetail = "<b>Please process IT Adjust refer to the detail in attached file.</b>";
             _sType = "01";
           } else {
             if (_action == 2) {
               _actionType = "Transfer_";
-              _subject = "Request for transfer";
+              _subject = "Request for transfer : " + _senderName;
               _bodyDetail = "<b>Please process Transfer refer to the detail in attached file.</b>";
               _sType = "02";
             } else {
               if (_action == 3) {
                 _actionType = "TopUp_";
-                _subject = "Request for Top up";
+                _subject = "Request for Top up : " + _senderName;
                 _bodyDetail = "<b>Please provide Top up refer to the detail in attached file.</b>";
                 _sType = "03";
               } else {
                 if (_action == 4) {
                   _actionType = "ReturnDC_";
-                  _subject = "Request for return to DC";
+                  _subject = "Request for return to DC : " + _senderName;
                   _bodyDetail = "<b>Please process Return refer to the detail in attached file.</b>";
                   _sType = "04";
                 }
@@ -311,6 +416,7 @@ class ImportProcessor {
           logger.info("SEND MAIL: Movement");
           logger.info("SUBJECT: ", _subject);
           logger.info("TO: ", _to[0].sEmail);
+          logger.info("CC: ", _senderMail);
 
           _body = "<b>Dear All,</b><br><br>"
           _body += _bodyDetail
@@ -318,6 +424,7 @@ class ImportProcessor {
           let info = await transporter.sendMail({
             from: mail.emailSender,
             to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
+            cc: _senderMail,
             subject: _subject,
             html: _body,
             priority: "high",
@@ -333,11 +440,11 @@ class ImportProcessor {
           logger.info("Update Movement NotifyFlag");
           for (let index = 0; index < _data.length; index++) {
             const element = _data[index];
-            await InquiryDao.update("update ttinvmovement set notifyFlag=1 where documentNbr='" + element.Document+"'");       
-            
+            await InquiryDao.update("update ttinvmovement set notifyFlag=1 where documentNbr='" + element.Document + "'");
+
             logger.info("Update Movement NotifyFlag : DocumentNbr : ", element.Document);
           }
-          
+
         }
 
       }
@@ -353,6 +460,40 @@ class ImportProcessor {
 
   }
 
+}
+
+async function GetSenderMail(_datas) {
+
+  let _mail = "";
+
+  for (let index = 0; index < _datas.length; index++) {
+    const element = _datas[index];
+    if (_mail == "") {
+      _mail += element.email;
+    } else {
+      _mail += ";" + element.email;
+    }
+
+  }
+
+  return _mail;
+}
+
+async function GetSenderName(_datas) {
+
+  let _name = "";
+
+  for (let index = 0; index < _datas.length; index++) {
+    const element = _datas[index];
+    if (_name == "") {
+      _name += element.name + " " + element.lastName;
+    } else {
+      _name += ", " + element.name + " " + element.lastName;
+    }
+
+  }
+
+  return _name;
 }
 
 module.exports = ImportProcessor;
