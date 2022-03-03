@@ -30,7 +30,7 @@ class ImportProcessor {
 
     try {
       logger.info("Start AV Process Import File");
-      logger.info("Version 1.0.2");
+      logger.info("Version 1.0.3");
 
       logger.info("Scan File..");
 
@@ -98,7 +98,7 @@ class ImportProcessor {
       let _sqlSenderMail = "select email,name,lastName from tmuser where userID in ";
 
 
-      let _sqlR5 = "select b.documentNbr as Document,b.partaintMRN as MRN,b.partaintPhysicainName as 'Physician Name',c.abCode as 'Customer Code',c.mailName1 as 'Customer Name',b.createDate as 'Create Date',d.itemCode as 'Item Code',d.description1 as 'Item Description',a.batchNumber as 'Batch Number',a.expiryDate as 'Expiry Date', a.usageQty as 'Used Qty',a.itemPrice as 'Price per Unit',a.usedDate as 'Used Date',a.rfid as RFID,a.partaintRemark1 as Remark1 ,a.partaintRemark2 as Notes,a.isTopUp as 'Top up',a.isBill as Bill,b.createUser as User,createDate as 'Entry Date'";
+      let _sqlR5 = "select b.documentNbr as Document,b.partaintMRN as MRN,b.partaintPhysicainName as 'Physician Name',c.abCode as 'Customer Code',c.mailName1 as 'Customer Name',DATE_FORMAT(b.createDate, '%m/%d/%Y %H:%i:%s') as 'Create Date',d.itemCode as 'Item Code',d.description1 as 'Item Description',a.batchNumber as 'Batch Number',DATE_FORMAT(addtime(a.expiryDate,'1:00'), '%m/%d/%Y') as 'Expiry Date', a.usageQty as 'Used Qty',a.itemPrice as 'Price per Unit',DATE_FORMAT(addtime(a.usedDate,'1:00'), '%m/%d/%Y') as 'Used Date',a.rfid as RFID,a.partaintRemark1 as Remark1 ,a.partaintRemark2 as Notes,a.isTopUp as 'Top up',a.isBill as Bill,b.createUser as User,DATE_FORMAT(b.createDate, '%m/%d/%Y %H:%i:%s') as 'Entry Date',DATE_FORMAT(b.updateDate, '%m/%d/%Y %H:%i:%s') as 'Submit Date' ";
       _sqlR5 += " from ttr5utilizationitem a left join ttr5utilization b on a.r5UtilizationID=b.r5UtilizationID";
       _sqlR5 += " left join tmcustomer c on b.customerID=c.customerID";
       _sqlR5 += " left join tmitem d on a.itemID=d.itemID";
@@ -118,7 +118,7 @@ class ImportProcessor {
       _sqlR5BillMail += " left join tmcustomer c on b.customerID=c.customerID";
       _sqlR5BillMail += " left join tmitem d on a.itemID=d.itemID";
       _sqlR5BillMail += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
-      _sqlR5BillMail += " and a.isTopUp=1)";
+      _sqlR5BillMail += " and a.isBill=1)";
 
       _sqlR5BillMail = _sqlSenderMail + _sqlR5BillMail;
 
@@ -126,18 +126,17 @@ class ImportProcessor {
       _sqlR5AllMail += " from ttr5utilizationitem a left join ttr5utilization b on a.r5UtilizationID=b.r5UtilizationID";
       _sqlR5AllMail += " left join tmcustomer c on b.customerID=c.customerID";
       _sqlR5AllMail += " left join tmitem d on a.itemID=d.itemID";
-      _sqlR5AllMail += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null) ";
-      _sqlR5AllMail += " )";
+      _sqlR5AllMail += " where b.status=2 and (b.notifyFlag=0 or b.notifyFlag is null))";    
 
       _sqlR5AllMail = _sqlSenderMail + _sqlR5AllMail;
 
 
       let _sqlMovement = "select b.documentNbr as Document,c.abCode as 'Own Customer Code',c.mailName1 as 'Own Customer Name',d.abCode as ' To Customer Code',d.mailName1 as 'To Customer Name',";
       _sqlMovement += "(case when (b.actionType=1) then 'IT Adjust' when (b.actionType=2) then 'Transfer' when (b.actionType=3) then 'Top up' when (b.actionType=4) then 'Return to DC' end) as 'Type',";
-      _sqlMovement += "b.requestBy as 'Request By',b.contactNo as 'Contact No',b.contactPerson as 'Contact Person',b.contactPersonNumber as 'Contact Person Number',b.deliveryDate as 'Delivery Date',";
-      _sqlMovement += " e.itemCode as 'Item Code',e.description1 as 'Item Description',a.batchNumber as 'Batch Number',a.expiryDate as 'Expiry Date', a.usageQty as 'Qty',a.requireDate as 'Require Date',a.remark,";
+      _sqlMovement += "b.requestBy as 'Request By',b.contactNo as 'Contact No',b.contactPerson as 'Contact Person',b.contactPersonNumber as 'Contact Person Number',DATE_FORMAT(b.deliveryDate, '%m/%d/%Y %H:%i:%s') as 'Delivery Date',";
+      _sqlMovement += " e.itemCode as 'Item Code',e.description1 as 'Item Description',a.batchNumber as 'Batch Number',DATE_FORMAT(addtime(a.expiryDate,'1:00'), '%m/%d/%Y') as 'Expiry Date', a.usageQty as 'Qty',DATE_FORMAT(addtime(a.requireDate,'1:00'), '%m/%d/%Y') as 'Require Date',a.remark,";
       _sqlMovement += "(case when (stopshipLotCheckedFlg=1) then 'Yes' when (stopshipLotCheckedFlg=0) then 'No' end) as 'Stopship Status',";
-      _sqlMovement += "b.createUser as User,createDate as 'Entry Date'";
+      _sqlMovement += "b.createUser as User,DATE_FORMAT(b.createDate, '%m/%d/%Y %H:%i:%s') as 'Entry Date',DATE_FORMAT(b.updateDate, '%m/%d/%Y %H:%i:%s') as 'Submit Date'";
 
       _sqlMovement += " from ttinvmovementitem a";
       _sqlMovement += " left join ttinvmovement b on a.invMovementID=b.invMovementID";
@@ -149,9 +148,9 @@ class ImportProcessor {
       let _sqlMovement2 = "select b.documentNbr as Document,c.abCode as 'Own Customer Code',c.mailName1 as 'Own Customer Name',";
       _sqlMovement2 += "(case when (b.actionType=1) then 'IT Adjust' when (b.actionType=2) then 'Transfer' when (b.actionType=3) then 'Top up' when (b.actionType=4) then 'Return to DC' end) as 'Type',";
       _sqlMovement2 += "b.requestBy as 'Request By',b.contactNo as 'Contact No',";
-      _sqlMovement2 += " e.itemCode as 'Item Code',e.description1 as 'Item Description',a.batchNumber as 'Batch Number',a.expiryDate as 'Expiry Date', a.usageQty as 'Qty',a.requireDate as 'Require Date',a.remark,";
+      _sqlMovement2 += " e.itemCode as 'Item Code',e.description1 as 'Item Description',a.batchNumber as 'Batch Number',DATE_FORMAT(addtime(a.expiryDate,'1:00'), '%m/%d/%Y') as 'Expiry Date', a.usageQty as 'Qty',DATE_FORMAT(addtime(a.requireDate,'1:00'), '%m/%d/%Y') as 'Require Date',a.remark,";
       _sqlMovement2 += "(case when (stopshipLotCheckedFlg=1) then 'Yes' when (stopshipLotCheckedFlg=0) then 'No' end) as 'Stopship Status',";
-      _sqlMovement2 += "b.createUser as User,createDate as 'Entry Date'";
+      _sqlMovement2 += "b.createUser as User,DATE_FORMAT(b.createDate, '%m/%d/%Y %H:%i:%s') as 'Entry Date',DATE_FORMAT(b.updateDate, '%m/%d/%Y %H:%i:%s') as 'Submit Date'";
 
       _sqlMovement2 += " from ttinvmovementitem a";
       _sqlMovement2 += " left join ttinvmovement b on a.invMovementID=b.invMovementID";
@@ -185,7 +184,7 @@ class ImportProcessor {
         _senderName = await GetSenderName(_r5TopupMail);
 
 
-        _fileName = "TopUp_" + Date.now().toString() + ".xlsx";
+        _fileName = "R5_TopUp_" + Date.now().toString() + ".xlsx";
 
         await _excelExport.export(_dataTopUp, _filePath + _fileName);
 
@@ -204,7 +203,7 @@ class ImportProcessor {
         let info = await transporter.sendMail({
           from: mail.emailSender,
           to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
-          cc: _senderMail,
+          //cc: _senderMail,
           subject: _subject,
           html: _body,
           priority: "high",
@@ -217,14 +216,14 @@ class ImportProcessor {
         // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
         console.log('Message sent: %s', info.messageId);
 
-        for (let index = 0; index < _dataTopUp.length; index++) {
-          const element = _dataTopUp[index];
+        // for (let index = 0; index < _dataTopUp.length; index++) {
+        //   const element = _dataTopUp[index];
 
-          const _r5Upd = { documentNbr: element.Document };
+        //   const _r5Upd = { documentNbr: element.Document };
 
-          _r5UpdateList.push(_r5Upd);
+        //   _r5UpdateList.push(_r5Upd);
 
-        }
+        // }
 
       }
 
@@ -240,7 +239,7 @@ class ImportProcessor {
         _senderMail = await GetSenderMail(_r5BillMail);
         _senderName = await GetSenderName(_r5BillMail);
 
-        _fileName = "Bill_" + Date.now().toString() + ".xlsx";
+        _fileName = "R5_Bill_" + Date.now().toString() + ".xlsx";
 
         await _excelExport.export(_dataBill, _filePath + _fileName);
 
@@ -259,7 +258,7 @@ class ImportProcessor {
         let info = await transporter.sendMail({
           from: mail.emailSender,
           to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
-          cc: _senderMail,
+          //cc: _senderMail,
           subject: _subject,
           html: _body,
           priority: "high",
@@ -272,32 +271,35 @@ class ImportProcessor {
         // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
         console.log('Message sent: %s', info.messageId);
 
-        for (let index = 0; index < _dataBill.length; index++) {
-          const element = _dataBill[index];
+        // for (let index = 0; index < _dataBill.length; index++) {
+        //   const element = _dataBill[index];
 
-          const _r5Upd = { documentNbr: element.Document };
+        //   const _r5Upd = { documentNbr: element.Document };
 
-          _r5UpdateList.push(_r5Upd);
+        //   _r5UpdateList.push(_r5Upd);
 
-        }
+        // }
 
       }
 
 
-      let _r5UnionData = _dataTopUp.concat(_dataBill);
+      //let _r5UnionData = _dataTopUp.concat(_dataBill);
 
-      console.log("R5_UNION : ", _r5UnionData);
+      _sql = _sqlR5 + " order by b.documentNbr";
 
-      if (_r5UnionData.length > 0) {
+      let _dataR5All = await InquiryDao.inquiry(_sql);
+      console.log("R5_ALL : ", _dataR5All);
+
+      if (_dataR5All.length > 0) {
 
         let _r5AllMail = await InquiryDao.inquiry(_sqlR5AllMail);
 
         _senderMail = await GetSenderMail(_r5AllMail);
         _senderName = await GetSenderName(_r5AllMail);
 
-        _fileName = "R5_" + Date.now().toString() + ".xlsx";
+        _fileName = "R5_ALL_" + Date.now().toString() + ".xlsx";
 
-        await _excelExport.export(_r5UnionData, _filePath + _fileName);
+        await _excelExport.export(_dataR5All, _filePath + _fileName);
 
         _subject = "R5 All : " + _senderName;
 
@@ -314,7 +316,7 @@ class ImportProcessor {
         let info = await transporter.sendMail({
           from: mail.emailSender,
           to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
-          cc: _senderMail,
+          //cc: _senderMail,
           subject: _subject,
           html: _body,
           priority: "high",
@@ -324,6 +326,17 @@ class ImportProcessor {
             }
           ]
         });
+
+        console.log('Message sent: %s', info.messageId);
+
+        for (let index = 0; index < _dataR5All.length; index++) {
+          const element = _dataR5All[index];
+
+          const _r5Upd = { documentNbr: element.Document };
+
+          _r5UpdateList.push(_r5Upd);
+
+        }
 
       }
 
@@ -424,7 +437,7 @@ class ImportProcessor {
           let info = await transporter.sendMail({
             from: mail.emailSender,
             to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
-            cc: _senderMail,
+            //cc: _senderMail,
             subject: _subject,
             html: _body,
             priority: "high",
