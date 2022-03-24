@@ -30,7 +30,7 @@ class ImportProcessor {
 
     try {
       logger.info("Start AV Process Import File");
-      logger.info("Version 1.0.5");
+      logger.info("Version 1.0.6");
 
       logger.info("Scan File..");
 
@@ -110,7 +110,7 @@ class ImportProcessor {
       let _sqlMovementMail = "";
       let _ccMails = [];
 
-      _sqlR5 = "select b.documentNbr as Document,b.partaintMRN as MRN,b.partaintPhysicainName as 'Physician Name',c.abCode as 'Customer Code',c.mailName1 as 'Customer Name',DATE_FORMAT(b.createDate, '%m/%d/%Y %H:%i:%s') as 'Create Date',d.itemCode as 'Item Code',d.description1 as 'Item Description',a.batchNumber as 'Batch Number',DATE_FORMAT(addtime(a.expiryDate,'3:00'), '%m/%d/%Y') as 'Expiry Date', a.usageQty as 'Used Qty',a.itemPrice as 'Price per Unit',DATE_FORMAT(addtime(a.usedDate,'3:00'), '%m/%d/%Y') as 'Used Date',a.rfid as RFID,a.partaintRemark1 as Remark1 ,a.partaintRemark2 as Notes,a.isTopUp as 'Top up',a.isBill as Bill,b.createUser as User,DATE_FORMAT(b.createDate, '%m/%d/%Y %H:%i:%s') as 'Entry Date',DATE_FORMAT(b.updateDate, '%m/%d/%Y %H:%i:%s') as 'Submit Date' ";
+      _sqlR5 = "select b.documentNbr as Document,b.partaintMRN as MRN,b.partaintPhysicainName as 'Physician Name',c.abCode as 'Customer Code',c.mailName1 as 'Customer Name',DATE_FORMAT(b.createDate, '%d %b %Y %H:%i:%s') as 'Create Date',d.itemCode as 'Item Code',d.description1 as 'Item Description',a.batchNumber as 'Batch Number',DATE_FORMAT(addtime(a.expiryDate,'3:00'), '%d %b %Y') as 'Expiry Date', a.usageQty as 'Used Qty',a.itemPrice as 'Price per Unit',DATE_FORMAT(addtime(a.usedDate,'3:00'), '%d %b %Y') as 'Used Date',a.rfid as RFID,a.partaintRemark1 as Remark1 ,a.partaintRemark2 as Notes,a.isTopUp as 'Top up',a.isBill as Bill,b.createUser as User,DATE_FORMAT(b.createDate, '%d %b %Y %H:%i:%s') as 'Entry Date',DATE_FORMAT(b.updateDate, '%d %b %Y %H:%i:%s') as 'Submit Date' ";
       _sqlR5 += " from ttr5utilizationitem a left join ttr5utilization b on a.r5UtilizationID=b.r5UtilizationID";
       _sqlR5 += " left join tmcustomer c on b.customerID=c.customerID";
       _sqlR5 += " left join tmitem d on a.itemID=d.itemID";
@@ -119,10 +119,10 @@ class ImportProcessor {
 
       _sqlMovement = "select b.documentNbr as Document,c.abCode as 'Own Customer Code',c.mailName1 as 'Own Customer Name',d.abCode as ' To Customer Code',d.mailName1 as 'To Customer Name',";
       _sqlMovement += "(case when (b.actionType=1) then 'IT Adjust' when (b.actionType=2) then 'Transfer' when (b.actionType=3) then 'Top up' when (b.actionType=4) then 'Return to DC' end) as 'Type',";
-      _sqlMovement += "b.requestBy as 'Request By',b.contactNo as 'Contact No',b.contactPerson as 'Contact Person',b.contactPersonNumber as 'Contact Person Number',DATE_FORMAT(b.deliveryDate, '%m/%d/%Y %H:%i:%s') as 'Delivery Date',";
-      _sqlMovement += " e.itemCode as 'Item Code',e.description1 as 'Item Description',a.batchNumber as 'Batch Number',DATE_FORMAT(addtime(a.expiryDate,'3:00'), '%m/%d/%Y') as 'Expiry Date', a.usageQty as 'Qty',DATE_FORMAT(addtime(a.requireDate,'3:00'), '%m/%d/%Y') as 'Require Date',a.remark,";
+      _sqlMovement += "b.requestBy as 'Request By',b.contactNo as 'Contact No',b.contactPerson as 'Contact Person',b.contactPersonNumber as 'Contact Person Number',DATE_FORMAT(b.deliveryDate, '%d %b %Y %H:%i:%s') as 'Delivery Date',";
+      _sqlMovement += " e.itemCode as 'Item Code',e.description1 as 'Item Description',a.batchNumber as 'Batch Number',DATE_FORMAT(addtime(a.expiryDate,'3:00'), '%d %b %Y') as 'Expiry Date', a.usageQty as 'Qty',DATE_FORMAT(addtime(a.requireDate,'3:00'), '%d %b %Y') as 'Require Date',a.remark,";
       _sqlMovement += "(case when (stopshipLotCheckedFlg=1) then 'Yes' when (stopshipLotCheckedFlg=0) then 'No' end) as 'Stopship Status',";
-      _sqlMovement += "b.createUser as User,DATE_FORMAT(b.createDate, '%m/%d/%Y %H:%i:%s') as 'Entry Date',DATE_FORMAT(b.updateDate, '%m/%d/%Y %H:%i:%s') as 'Submit Date'";
+      _sqlMovement += "b.createUser as User,DATE_FORMAT(b.createDate, '%d %b %Y %H:%i:%s') as 'Entry Date',DATE_FORMAT(b.updateDate, '%d %b %Y %H:%i:%s') as 'Submit Date'";
 
       _sqlMovement += " from ttinvmovementitem a";
       _sqlMovement += " left join ttinvmovement b on a.invMovementID=b.invMovementID";
@@ -134,9 +134,9 @@ class ImportProcessor {
       _sqlMovement2 = "select b.documentNbr as Document,c.abCode as 'Own Customer Code',c.mailName1 as 'Own Customer Name',";
       _sqlMovement2 += "(case when (b.actionType=1) then 'IT Adjust' when (b.actionType=2) then 'Transfer' when (b.actionType=3) then 'Top up' when (b.actionType=4) then 'Return to DC' end) as 'Type',";
       _sqlMovement2 += "b.requestBy as 'Request By',b.contactNo as 'Contact No',";
-      _sqlMovement2 += " e.itemCode as 'Item Code',e.description1 as 'Item Description',a.batchNumber as 'Batch Number',DATE_FORMAT(addtime(a.expiryDate,'3:00'), '%m/%d/%Y') as 'Expiry Date', a.usageQty as 'Qty',DATE_FORMAT(addtime(a.requireDate,'3:00'), '%m/%d/%Y') as 'Require Date',a.remark,";
+      _sqlMovement2 += " e.itemCode as 'Item Code',e.description1 as 'Item Description',a.batchNumber as 'Batch Number',DATE_FORMAT(addtime(a.expiryDate,'3:00'), '%d %b %Y') as 'Expiry Date', a.usageQty as 'Qty',DATE_FORMAT(addtime(a.requireDate,'3:00'), '%d %b %Y') as 'Require Date',a.remark,";
       _sqlMovement2 += "(case when (stopshipLotCheckedFlg=1) then 'Yes' when (stopshipLotCheckedFlg=0) then 'No' end) as 'Stopship Status',";
-      _sqlMovement2 += "b.createUser as User,DATE_FORMAT(b.createDate, '%m/%d/%Y %H:%i:%s') as 'Entry Date',DATE_FORMAT(b.updateDate, '%m/%d/%Y %H:%i:%s') as 'Submit Date'";
+      _sqlMovement2 += "b.createUser as User,DATE_FORMAT(b.createDate, '%d %b %Y %H:%i:%s') as 'Entry Date',DATE_FORMAT(b.updateDate, '%d %b %Y %H:%i:%s') as 'Submit Date'";
 
       _sqlMovement2 += " from ttinvmovementitem a";
       _sqlMovement2 += " left join ttinvmovement b on a.invMovementID=b.invMovementID";
