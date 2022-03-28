@@ -178,91 +178,91 @@ class ImportProcessor {
 
         console.log("CUSTOMER NAME : ", _custName);
 
-        let _dataTopUp = await InquiryDao.inquiry(_sql);
-        console.log("TOP UP: ", _dataTopUp);
+        // let _dataTopUp = await InquiryDao.inquiry(_sql);
+        // console.log("TOP UP: ", _dataTopUp);
 
-        if (_dataTopUp.length > 0) {
+        // if (_dataTopUp.length > 0) {
 
 
-          _senderMail = await GetSenderMail(_ccMails);
-          _senderName = await GetSenderName(_ccMails);
+        //   _senderMail = await GetSenderMail(_ccMails);
+        //   _senderName = await GetSenderName(_ccMails);
 
-          _fileName = "R5_TopUp_" + Date.now().toString() + ".xlsx";
+        //   _fileName = "R5_TopUp_" + Date.now().toString() + ".xlsx";
 
-          await _excelExport.export(_dataTopUp, _filePath + _fileName);
+        //   await _excelExport.export(_dataTopUp, _filePath + _fileName);
 
-          _subject = "R5 Request for Top up : " + _senderName + " : " + _custName;
+        //   _subject = "R5 Request for Top up : " + _senderName + " : " + _custName;
 
-          _to = notifyConfig.filter(z => z.sType == "01" && z.sProgram == "R5");
+        //   _to = notifyConfig.filter(z => z.sType == "01" && z.sProgram == "R5");
 
-          logger.info("SEND MAIL: R5 TopUp");
-          logger.info("SUBJECT: ", _subject);
-          logger.info("TO: ", _to[0].sEmail);
-          logger.info("CC: ", _senderMail);
+        //   logger.info("SEND MAIL: R5 TopUp");
+        //   logger.info("SUBJECT: ", _subject);
+        //   logger.info("TO: ", _to[0].sEmail);
+        //   logger.info("CC: ", _senderMail);
 
-          _body = "<b>Dear All,</b><br><br>"
-          _body += "<b>Please provide Top up refer to the detail in attached file.</b>"
+        //   _body = "<b>Dear All,</b><br><br>"
+        //   _body += "<b>Please provide Top up refer to the detail in attached file.</b>"
 
-          let info = await transporter.sendMail({
-            from: mail.emailSender,
-            to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
-            cc: _senderMail,
-            subject: _subject,
-            html: _body,
-            priority: "high",
-            attachments: [
-              {
-                path: _filePath + _fileName
-              }
-            ]
-          });
-          // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
-          console.log('Message sent: %s', info.messageId);
-        }
+        //   let info = await transporter.sendMail({
+        //     from: mail.emailSender,
+        //     to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
+        //     cc: _senderMail,
+        //     subject: _subject,
+        //     html: _body,
+        //     priority: "high",
+        //     attachments: [
+        //       {
+        //         path: _filePath + _fileName
+        //       }
+        //     ]
+        //   });
+        //   // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
+        //   console.log('Message sent: %s', info.messageId);
+        // }
 
-        _sql = _sqlR5 + _createUser + " and a.isBill=1 order by b.documentNbr";
+        // _sql = _sqlR5 + _createUser + " and a.isBill=1 order by b.documentNbr";
 
-        let _dataBill = await InquiryDao.inquiry(_sql);
-        console.log("BILL: ", _dataBill);
+        // let _dataBill = await InquiryDao.inquiry(_sql);
+        // console.log("BILL: ", _dataBill);
 
-        if (_dataBill.length > 0) {
+        // if (_dataBill.length > 0) {
 
-          _senderMail = await GetSenderMail(_ccMails);
-          _senderName = await GetSenderName(_ccMails);
+        //   _senderMail = await GetSenderMail(_ccMails);
+        //   _senderName = await GetSenderName(_ccMails);
 
-          _fileName = "R5_Bill_" + Date.now().toString() + ".xlsx";
+        //   _fileName = "R5_Bill_" + Date.now().toString() + ".xlsx";
 
-          await _excelExport.export(_dataBill, _filePath + _fileName);
+        //   await _excelExport.export(_dataBill, _filePath + _fileName);
 
-          _subject = "R5 Request for Bill : " + _senderName + " : " + _custName;;
+        //   _subject = "R5 Request for Bill : " + _senderName + " : " + _custName;;
 
-          _to = notifyConfig.filter(z => z.sType == "02" && z.sProgram == "R5");
+        //   _to = notifyConfig.filter(z => z.sType == "02" && z.sProgram == "R5");
 
-          logger.info("SEND MAIL: R5 BILL");
-          logger.info("SUBJECT: ", _subject);
-          logger.info("TO: ", _to[0].sEmail);
-          logger.info("CC: ", _senderMail);
+        //   logger.info("SEND MAIL: R5 BILL");
+        //   logger.info("SUBJECT: ", _subject);
+        //   logger.info("TO: ", _to[0].sEmail);
+        //   logger.info("CC: ", _senderMail);
 
-          _body = "<b>Dear All,</b><br><br>"
-          _body += "<b>Please bill to customer refer to the detail in attached file.</b>"
+        //   _body = "<b>Dear All,</b><br><br>"
+        //   _body += "<b>Please bill to customer refer to the detail in attached file.</b>"
 
-          let info = await transporter.sendMail({
-            from: mail.emailSender,
-            to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
-            cc: _senderMail,
-            subject: _subject,
-            html: _body,
-            priority: "high",
-            attachments: [
-              {
-                path: _filePath + _fileName
-              }
-            ]
-          });
-          // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
-          console.log('Message sent: %s', info.messageId);
+        //   let info = await transporter.sendMail({
+        //     from: mail.emailSender,
+        //     to: _to[0].sEmail, // อีเมลผู้รับ สามารถกำหนดได้มากกว่า 1 อีเมล โดยขั้นด้วย ,(Comma)
+        //     cc: _senderMail,
+        //     subject: _subject,
+        //     html: _body,
+        //     priority: "high",
+        //     attachments: [
+        //       {
+        //         path: _filePath + _fileName
+        //       }
+        //     ]
+        //   });
+        //   // log ข้อมูลการส่งว่าส่งได้-ไม่ได้
+        //   console.log('Message sent: %s', info.messageId);
 
-        }
+        // }
 
         _sql = _sqlR5 + _createUser + " order by b.documentNbr";
 
